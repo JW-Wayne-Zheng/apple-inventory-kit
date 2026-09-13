@@ -1,0 +1,14 @@
+{
+  "name": "orchard-inventory",
+  "private": true,
+  "workspaces": ["apps/web", "packages/shared"],
+  "scripts": {
+    "dev": "npm run dev --workspace @orchard/web",
+    "build": "npm run build --workspace @orchard/web",
+    "lint": "npm run lint --workspace @orchard/web",
+    "typecheck": "npm run typecheck --workspace @orchard/web",
+    "test": "npm run test --workspace @orchard/web"
+  },
+  "engines": { "node": ">=20" }
+}
+
