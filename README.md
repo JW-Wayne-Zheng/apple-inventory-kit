@@ -21,11 +21,11 @@ four finishes and all four storage capacities.
 
 ### English store list
 
-![Orchard English pickup availability list for ZIP 90210](https://github.com/user-attachments/assets/423b9694-81e6-467c-b526-a00c93270ee4)
+![Orchard English pickup availability list for ZIP 90210](docs/screenshots/orchard-list-en.jpg)
 
 ### Chinese map view
 
-![Orchard Chinese Apple Store map for ZIP 90210](https://github.com/user-attachments/assets/adcbfe33-2216-496d-9655-b2981208037a)
+![Orchard Chinese Apple Store map for ZIP 90210](docs/screenshots/orchard-map-zh.jpg)
 
 ## Architecture
 

@@ -19,11 +19,11 @@ Orchard 是独立工具，**与 Apple Inc. 无关联**。
 
 ### 英文门店列表
 
-![Orchard 英文版 90210 邮政编码到店取货列表](https://github.com/user-attachments/assets/423b9694-81e6-467c-b526-a00c93270ee4)
+![Orchard 英文版 90210 邮政编码到店取货列表](docs/screenshots/orchard-list-en.jpg)
 
 ### 中文地图视图
 
-![Orchard 中文版 90210 邮政编码 Apple Store 地图](https://github.com/user-attachments/assets/adcbfe33-2216-496d-9655-b2981208037a)
+![Orchard 中文版 90210 邮政编码 Apple Store 地图](docs/screenshots/orchard-map-zh.jpg)
 
 ## 技术架构
 
