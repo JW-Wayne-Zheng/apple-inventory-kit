@@ -15,6 +15,16 @@ Orchard 是独立工具，**与 Apple Inc. 无关联**。
 
 当前产品范围有意限制为 iPhone 18 Pro 和 iPhone 18 Pro Max，包含四种颜色和四种容量。
 
+## 应用截图
+
+### 英文门店列表
+
+![Orchard 英文版 90210 邮政编码到店取货列表](https://github.com/user-attachments/assets/423b9694-81e6-467c-b526-a00c93270ee4)
+
+### 中文地图视图
+
+![Orchard 中文版 90210 邮政编码 Apple Store 地图](https://github.com/user-attachments/assets/adcbfe33-2216-496d-9655-b2981208037a)
+
 ## 技术架构
 
 - **前端：** Next.js、React、TypeScript、Tailwind CSS、TanStack Query、MapLibre GL JS、
