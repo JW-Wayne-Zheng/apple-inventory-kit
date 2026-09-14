@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getAppleBuyUrl } from "./apple";
+import { getAppleBuyUrl, getAppleProductName } from "./apple";
 import type { ProductVariant } from "./types";
 
 function configuredVariant(
@@ -27,10 +27,10 @@ describe("getAppleBuyUrl", () => {
   });
 
   it("uses the larger display for Pro Max", () => {
-    expect(
-      getAppleBuyUrl(
-        configuredVariant("iphone-18-pro-max", "Black", "256GB"),
-      ),
-    ).toContain("/6.9-inch-display-256gb-black-unlocked");
+    const variant = configuredVariant("iphone-18-pro-max", "Black", "256GB");
+    expect(getAppleBuyUrl(variant)).toContain(
+      "/6.9-inch-display-256gb-black-unlocked",
+    );
+    expect(getAppleProductName(variant)).toBe("iPhone 18 Pro Max");
   });
 });

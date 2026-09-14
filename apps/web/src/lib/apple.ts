@@ -14,3 +14,9 @@ export function getAppleBuyUrl(variant: ProductVariant): string {
   if (!storage || !finish) return APPLE_BUY_BASE;
   return `${APPLE_BUY_BASE}/${display}-${storage}-${finish}-unlocked`;
 }
+
+export function getAppleProductName(variant: ProductVariant): string {
+  return variant.product_id === "iphone-18-pro-max"
+    ? "iPhone 18 Pro Max"
+    : "iPhone 18 Pro";
+}

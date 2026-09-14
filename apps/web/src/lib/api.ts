@@ -34,6 +34,8 @@ export const api = {
     request<AvailabilityResponse>(
       `/availability?product_id=${encodeURIComponent(productId)}&postal_code=${encodeURIComponent(zip)}`,
     ),
+  availabilityStreamUrl: (productId: string, zip: string) =>
+    `${API_URL}/availability/stream?product_id=${encodeURIComponent(productId)}&postal_code=${encodeURIComponent(zip)}`,
   refreshAvailability: (productId: string, zip: string) =>
     request<AvailabilityResponse>("/availability/refresh", {
       method: "POST",
@@ -46,4 +48,3 @@ export const api = {
     store_id?: string;
   }) => request("/alerts", { method: "POST", body: JSON.stringify(payload) }),
 };
-

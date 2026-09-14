@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowDownUp,
   BellRing,
@@ -20,7 +20,7 @@ import {
   useI18n,
 } from "@/lib/i18n";
 import { zipSchema } from "@/lib/search";
-import type { Product, ProductVariant } from "@/lib/types";
+import type { AvailabilityResponse, Product, ProductVariant } from "@/lib/types";
 import { AlertForm } from "./alert-form";
 import { Logo } from "./logo";
 import { LanguageSwitcher } from "./language-switcher";
@@ -32,6 +32,7 @@ import { Input } from "./ui/input";
 import { VariantPicker } from "./variant-picker";
 
 const rank = { AVAILABLE: 0, LIMITED: 1, UNKNOWN: 2, UNAVAILABLE: 3 };
+const WATCH_INTERVAL_SECONDS = 30;
 type DistanceRange = 25 | 50 | 100 | "all";
 
 function parseDistanceRange(value: string | null): DistanceRange {
@@ -43,6 +44,7 @@ function parseDistanceRange(value: string | null): DistanceRange {
 
 export function InventoryExplorer() {
   const { locale, t } = useI18n();
+  const queryClient = useQueryClient();
   const searchParams = useSearchParams();
   const router = useRouter();
   const initialZip = searchParams.get("zip") ?? "";
@@ -61,7 +63,7 @@ export function InventoryExplorer() {
   const [sort, setSort] = useState<"distance" | "availability">("distance");
   const [view, setView] = useState<"list" | "map">("list");
   const [isWatching, setIsWatching] = useState(false);
-  const [secondsUntilCheck, setSecondsUntilCheck] = useState(60);
+  const [secondsUntilCheck, setSecondsUntilCheck] = useState(WATCH_INTERVAL_SECONDS);
   const previousAvailableStores = useRef<Set<string> | null>(null);
 
   const productsQuery = useQuery({
@@ -91,14 +93,55 @@ export function InventoryExplorer() {
       submitted &&
       Boolean(selectedVariant) &&
       zipSchema.safeParse(submittedZip).success,
-    refetchInterval: isWatching ? 60_000 : false,
-    refetchIntervalInBackground: true,
   });
+
+  const refreshMutation = useMutation({
+    mutationFn: ({ productId, postalCode }: { productId: string; postalCode: string }) =>
+      api.refreshAvailability(productId, postalCode),
+    onSuccess: (data, { productId, postalCode }) => {
+      queryClient.setQueryData(["availability", productId, postalCode], data);
+    },
+  });
+
+  useEffect(() => {
+    if (
+      !isWatching ||
+      !selectedVariant ||
+      !zipSchema.safeParse(submittedZip).success
+    ) {
+      return;
+    }
+    const productId = selectedVariant.id;
+    const source = new EventSource(
+      api.availabilityStreamUrl(productId, submittedZip),
+    );
+    const handleAvailability = (event: Event) => {
+      if (!(event instanceof MessageEvent)) return;
+      try {
+        const data = JSON.parse(event.data) as AvailabilityResponse;
+        queryClient.setQueryData(
+          ["availability", productId, submittedZip],
+          data,
+        );
+        setSecondsUntilCheck(WATCH_INTERVAL_SECONDS);
+      } catch {
+        // EventSource reconnects automatically; retain the last valid snapshot.
+      }
+    };
+    source.addEventListener("availability", handleAvailability);
+    return () => {
+      source.removeEventListener("availability", handleAvailability);
+      source.close();
+    };
+  }, [isWatching, queryClient, selectedVariant, submittedZip]);
 
   useEffect(() => {
     if (!isWatching) return;
     const timer = window.setInterval(
-      () => setSecondsUntilCheck((seconds) => (seconds <= 1 ? 60 : seconds - 1)),
+      () =>
+        setSecondsUntilCheck((seconds) =>
+          seconds <= 1 ? WATCH_INTERVAL_SECONDS : seconds - 1,
+        ),
       1_000,
     );
     return () => window.clearInterval(timer);
@@ -130,10 +173,14 @@ export function InventoryExplorer() {
       return;
     }
     setZipError("");
+    refreshMutation.reset();
     setIsWatching(false);
     previousAvailableStores.current = null;
-    if (submitted && zip === submittedZip) {
-      void availabilityQuery.refetch();
+    if (submitted && zip === submittedZip && selectedVariant) {
+      refreshMutation.mutate({
+        productId: selectedVariant.id,
+        postalCode: submittedZip,
+      });
     }
     setSubmittedZip(zip);
     setSubmitted(true);
@@ -148,7 +195,7 @@ export function InventoryExplorer() {
     if (typeof Notification !== "undefined" && Notification.permission === "default") {
       await Notification.requestPermission();
     }
-    setSecondsUntilCheck(60);
+    setSecondsUntilCheck(WATCH_INTERVAL_SECONDS);
     setIsWatching(true);
   }
 
@@ -196,8 +243,8 @@ export function InventoryExplorer() {
               <Input value={zip} onChange={(e) => { setZip(e.target.value.replace(/\D/g, "").slice(0, 5)); setZipError(""); }} placeholder={t("zipCode")} inputMode="numeric" className="border-0 bg-mist pl-12 focus:ring-0" />
               {zipError && <span className="absolute left-2 top-14 whitespace-nowrap text-xs text-rose-600">{zipError}</span>}
             </label>
-            <Button type="submit" className="h-12 px-7" disabled={availabilityQuery.isFetching && zip === submittedZip}>
-              {availabilityQuery.isFetching && zip === submittedZip ? t("checking") : t("checkAvailability")}
+            <Button type="submit" className="h-12 px-7" disabled={(availabilityQuery.isFetching || refreshMutation.isPending) && zip === submittedZip}>
+              {(availabilityQuery.isFetching || refreshMutation.isPending) && zip === submittedZip ? t("checking") : t("checkAvailability")}
             </Button>
           </form>
           {locationChangePending && <p className={`${submitted ? "" : "text-center"} mt-3 text-sm text-black/45`}>{t("locationChanged")}</p>}
@@ -246,7 +293,7 @@ export function InventoryExplorer() {
                     <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-60" />
                     <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-600" />
                   </span>
-                  {t("watchingEveryMinute")}
+                  {t("watchingLive")}
                 </span>
                 <span className="text-emerald-800/70">
                   {visibleResults.filter((item) => item.availability.available).length > 0
@@ -259,6 +306,7 @@ export function InventoryExplorer() {
             {availabilityQuery.data?.is_stale && <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">{t("refreshFailed")}</div>}
             {availabilityQuery.isLoading && <ResultsSkeleton />}
             {availabilityQuery.error && <ErrorPanel message={availabilityQuery.error.message} />}
+            {refreshMutation.error && <ErrorPanel message={refreshMutation.error.message} />}
 
             {availabilityQuery.data && (
               <>

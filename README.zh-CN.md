@@ -4,9 +4,10 @@
 
 Orchard 是一个精心设计的 iPhone 18 Pro 到店取货库存查询工具。用户输入美国邮政编码，选择准确的
 iPhone 18 Pro 或 Pro Max 配置，即可查看附近 Apple Store、按 25/50/100 英里筛选、切换列表与
-地图、比较库存，并前往 Apple 官方页面继续游客结账。界面支持中文和英文。
+地图、比较库存，并通过下单指引把准确设备配置和首选取货门店带到 Apple 官方页面。界面支持中文和英文。
 
-“蹲库存”模式会在页面保持打开时每 60 秒检查一次；浏览器允许通知后，发现有货门店会提醒用户。
+“蹲库存”模式会在页面保持打开时建立每 5 秒一次的服务器实时脉冲，并复用 30 秒共享库存缓存；
+浏览器允许通知后，发现有货门店会提醒用户。
 Orchard 是独立工具，**与 Apple Inc. 无关联**。
 
 默认 `demo` 模式使用免费的 Zippopotam.us 将美国邮政编码转换为坐标，再使用 Apple 公开的零售店
@@ -32,7 +33,8 @@ Orchard 是独立工具，**与 Apple Inc. 无关联**。
 - **后端：** FastAPI、Pydantic、HTTPX、SQLAlchemy 2、Alembic 和结构化日志
 - **数据：** PostgreSQL 保存产品、门店、历史和提醒；Redis 保存短期库存与元数据缓存
 - **数据提供层：** 统一的 `InventoryProvider` 接口，包含位置感知演示、离线 Mock 和实验性 Apple 实现
-- **可靠性：** 请求合并、刷新频率限制、上游失败时使用旧缓存、严格超时且不进行激进重试
+- **可靠性：** Server-Sent Events、请求合并、刷新频率限制、明确的 Apple 请求预算、上游失败时使用旧缓存、
+  严格超时且不进行激进重试
 
 更多内容见[架构说明](docs/architecture.md)、[API 说明](docs/api.md)和
 [Apple 数据源调研](docs/apple-provider.md)。
@@ -154,8 +156,10 @@ uv run pytest --cov=app
 | `POSTAL_LOOKUP_BASE_URL` | 演示模式使用的免费邮政编码坐标服务 |
 | `APPLE_GRAPHQL_PATH`, `APPLE_STORE_SEARCH_QUERY_ID` | Apple 公开零售店目录查询配置 |
 | `APPLE_FULFILLMENT_PATH` | 外置配置的、无官方文档的库存路径 |
-| `INVENTORY_CACHE_TTL_SECONDS` | 库存缓存 60 秒 |
+| `APPLE_REQUEST_BUDGET_PER_MINUTE` | 每个 API 进程每分钟最多 4 次 Apple 库存请求 |
+| `INVENTORY_CACHE_TTL_SECONDS` | 库存缓存 30 秒 |
 | `INVENTORY_STALE_TTL_SECONDS` | 上游失败时最多使用 15 分钟旧缓存 |
+| `INVENTORY_STREAM_POLL_SECONDS` | 每 5 秒服务器实时脉冲；不会绕过库存缓存 |
 | `STORE_CACHE_TTL_SECONDS` | 门店目录缓存 24 小时 |
 | `DATABASE_URL`, `REDIS_URL` | 数据库和缓存连接 |
 | `NEXT_PUBLIC_MAP_TILE_URL` | 地图瓦片地址；本地轻量使用时默认为 OpenStreetMap |
@@ -165,6 +169,11 @@ uv run pytest --cov=app
 ## 已知限制
 
 - `demo` 模式的库存状态是模拟的；门店位置和距离来自邮政编码中心点与 Apple 公开零售店目录。
+- “蹲库存”每 5 秒接收服务器脉冲；共享库存缓存把同一配置/位置的普通上游刷新限制为每 30 秒一次。
+  Apple 模式还限制每个 API 进程每分钟最多请求 4 次；这是 Orchard 的安全上限，不是 Apple 公布的额度。
+- Orchard 不会对 Apple 进行压力测试。手动强制刷新仍限制为每个客户端每分钟 6 次，并受 Apple 数据源预算约束。
+- 下单指引会打开准确的 Apple 配置、复制首选门店和邮政编码，并说明取货及游客结账步骤；购物袋、门店确认、
+  身份信息和付款全部留在 Apple 官网完成。
 - 默认 OpenStreetMap 瓦片服务适合本地轻量使用，但没有可用性保证；正式大流量部署应配置专用服务。
 - 提醒会保存，但服务器端邮件发送和定时检查仍是预留接口。
 - 浏览器“蹲库存”只在页面保持打开时运行。

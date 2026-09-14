@@ -98,9 +98,10 @@ default is `INVENTORY_PROVIDER=demo`, which uses Apple's public retail directory
 clearly presenting deterministic inventory status as simulated.
 
 No formal rate-limit headers or documented quotas were observed because the fulfillment response was
-not available in this environment. Orchard therefore assumes the strictest practical posture: 60-second
-inventory caching by default, 15-minute stale fallback, per-client refresh throttling, request coalescing,
-short timeouts, no aggressive retries, and no automated live-provider tests.
+not available in this environment. Orchard does not attempt to discover a limit by load-testing Apple.
+It uses 30-second shared inventory caching, a four-request-per-minute budget per API process, 15-minute stale
+fallback, per-client refresh throttling, request coalescing, short timeouts, no aggressive retries, and no
+automated live-provider tests. The request budget is an application safety ceiling, not an Apple quota.
 
 ## Stability and legal risk
 

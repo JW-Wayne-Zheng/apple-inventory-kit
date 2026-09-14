@@ -8,6 +8,7 @@ import structlog
 
 from app.core.config import Settings
 from app.providers.base import ProviderError
+from app.services.rate_limit import RefreshRateLimiter
 
 log = structlog.get_logger()
 
@@ -15,8 +16,22 @@ log = structlog.get_logger()
 class AppleClient:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
+        self.request_budget = RefreshRateLimiter(
+            settings.apple_request_budget_per_minute,
+            60,
+        )
 
     async def fulfillment(self, part_number: str, postal_code: str) -> dict[str, Any]:
+        if not await self.request_budget.allow("apple-fulfillment"):
+            await log.awarning(
+                "provider_request_budget_exhausted",
+                provider="apple",
+                budget_per_minute=self.settings.apple_request_budget_per_minute,
+            )
+            raise ProviderError(
+                "Apple request budget exhausted; using cached availability",
+                retryable=True,
+            )
         params = {
             "fae": "true",
             "pl": "true",

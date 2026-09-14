@@ -1,11 +1,11 @@
 "use client";
 
-import { ArrowUpRight, Clock3, MapPin, ShoppingBag } from "lucide-react";
+import { ArrowUpRight, Clock3, MapPin } from "lucide-react";
 import Link from "next/link";
-import { getAppleBuyUrl } from "@/lib/apple";
 import { localizePickupMessage, useI18n } from "@/lib/i18n";
 import type { AvailabilityResult } from "@/lib/types";
 import { formatRelativeTime } from "@/lib/utils";
+import { CheckoutHandoff } from "./checkout-handoff";
 import { StatusBadge } from "./status-badge";
 
 export function StoreCard({ result, zip, range, index }: { result: AvailabilityResult; zip: string; range: number | "all"; index: number }) {
@@ -32,15 +32,7 @@ export function StoreCard({ result, zip, range, index }: { result: AvailabilityR
         <div className="flex flex-col items-end gap-2">
           {result.availability.available && (
             <>
-              <a
-                href={getAppleBuyUrl(result.product)}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-2 rounded-full bg-ink px-4 py-2 text-sm font-semibold text-white transition hover:bg-black/75"
-              >
-                <ShoppingBag className="h-4 w-4" />
-                {t("orderAtApple")}
-              </a>
+              <CheckoutHandoff result={result} zip={zip} />
               <span className="max-w-56 text-right text-[11px] leading-snug text-black/35">
                 {t("pickupAtStore", { store: result.store.name })}
               </span>

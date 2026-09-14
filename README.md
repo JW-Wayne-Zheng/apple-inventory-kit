@@ -5,9 +5,9 @@
 A polished iPhone 18 Pro pickup availability tracker. Enter a ZIP code, choose an exact Pro or Pro Max
 configuration, compare nearby stores, sort/filter results, inspect store details, check availability,
 filter by a 25/50/100-mile radius, switch between English and Chinese, and continue to Apple’s official
-configuration page for pickup and guest checkout.
-A focused “蹲库存” mode checks every 60 seconds while the page is open
-and uses browser notifications when a store becomes available. Orchard is independent and
+configuration page through a guided handoff that preserves the exact device and preferred pickup store.
+A focused “蹲库存” mode opens a five-second live server pulse while the page is open, reuses a shared
+30-second inventory cache, and uses browser notifications when a store becomes available. Orchard is independent and
 **not affiliated with Apple Inc.**
 
 The default demo mode resolves U.S. ZIP codes with the free Zippopotam.us service and uses Apple's public
@@ -35,8 +35,8 @@ four finishes and all four storage capacities.
 - **Data:** PostgreSQL for products/stores/history/alerts; Redis for short-lived inventory and metadata
 - **Providers:** a normalized `InventoryProvider` boundary with complete mock and experimental Apple
   implementations
-- **Reliability:** cache coalescing, per-client refresh limits, stale-on-provider-error, strict outbound
-  timeouts, no aggressive retries
+- **Reliability:** Server-Sent Events, cache coalescing, per-client refresh limits, an explicit Apple request
+  budget, stale-on-provider-error, strict outbound timeouts, and no aggressive retries
 
 See [architecture](docs/architecture.md), [API reference](docs/api.md), and
 [Apple provider research](docs/apple-provider.md).
@@ -148,8 +148,10 @@ Copy `.env.example`; every setting is documented there. Notable values:
 | `POSTAL_LOOKUP_BASE_URL` | free ZIP-to-coordinate lookup used by demo mode |
 | `APPLE_GRAPHQL_PATH`, `APPLE_STORE_SEARCH_QUERY_ID` | Apple's public retail-directory query configuration |
 | `APPLE_FULFILLMENT_PATH` | externalized undocumented route |
-| `INVENTORY_CACHE_TTL_SECONDS` | 60 seconds |
+| `APPLE_REQUEST_BUDGET_PER_MINUTE` | maximum 4 Apple fulfillment requests per API process/minute |
+| `INVENTORY_CACHE_TTL_SECONDS` | 30 seconds |
 | `INVENTORY_STALE_TTL_SECONDS` | 15-minute failure fallback |
+| `INVENTORY_STREAM_POLL_SECONDS` | 5-second live server pulse; does not bypass the inventory cache |
 | `STORE_CACHE_TTL_SECONDS` | 24 hours |
 | `PRODUCT_CACHE_TTL_SECONDS` | 6 hours |
 | `REFRESH_LIMIT_REQUESTS` | 6 refreshes per client/window |
@@ -170,6 +172,13 @@ Important limitations:
 - Demo inventory statuses are simulated; store locations and distances come from the ZIP centroid and Apple's
   public retail directory. The default OpenStreetMap tile service is suitable for light interactive use but has
   no SLA; configure a production tile provider before significant traffic.
+- Watch mode receives a five-second server pulse while the shared inventory cache limits normal upstream refreshes
+  to once every 30 seconds per configuration/location. Apple mode also enforces a four-request-per-minute budget
+  per API process; this is an Orchard safety ceiling, not a documented Apple quota.
+- Orchard does not load-test Apple. Manual force refreshes remain limited to six requests per client per minute and
+  are still subject to the Apple provider budget.
+- The order handoff opens the exact Apple configuration, copies the preferred store and ZIP, and explains pickup and
+  guest checkout. Bag creation, store confirmation, identity, and payment remain on Apple's site.
 - Alert records persist, but server-side notification delivery and recurring checks are intentionally stubbed behind an interface.
 - Browser inventory watching only runs while the page remains open.
 - In-process request coalescing and rate limits must move to Redis for a horizontally scaled deployment.

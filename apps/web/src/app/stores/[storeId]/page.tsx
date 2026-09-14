@@ -1,15 +1,15 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Clock3, MapPin, Navigation, ShieldCheck, ShoppingBag } from "lucide-react";
+import { ArrowLeft, Clock3, MapPin, Navigation, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
-import { getAppleBuyUrl } from "@/lib/apple";
 import { localizePickupMessage, useI18n } from "@/lib/i18n";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { Logo } from "@/components/logo";
 import { StatusBadge } from "@/components/status-badge";
+import { CheckoutHandoff } from "@/components/checkout-handoff";
 
 export default function StoreDetailPage() {
   const { locale, t } = useI18n();
@@ -37,7 +37,7 @@ export default function StoreDetailPage() {
                 <div className="sm:text-right"><p className="text-3xl font-semibold tabular-nums">{storeQuery.data.distance_miles.toFixed(1)}</p><p className="text-sm text-black/40">{t("milesAway")}</p><a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${storeQuery.data.address}, ${storeQuery.data.city}`)}`} target="_blank" rel="noreferrer" className="mt-5 inline-flex items-center gap-2 rounded-full border border-black/10 px-4 py-2 text-sm font-semibold hover:bg-mist"><Navigation className="h-4 w-4" />{t("directions")}</a></div>
               </div>
             </section>
-            {availability && <section className="mt-6 rounded-[2rem] border border-black/[.07] bg-white p-7 sm:p-10"><div className="flex flex-wrap items-start justify-between gap-6"><div><p className="text-xs font-bold uppercase tracking-[.14em] text-black/35">{t("currentPickupStatus")}</p><h2 className="mt-2 text-2xl font-semibold">{localizePickupMessage(availability.availability.pickup_message, locale)}</h2></div><div className="flex flex-col items-end gap-3"><StatusBadge status={availability.availability.status} />{availability.availability.available && <><a href={getAppleBuyUrl(availability.product)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-full bg-ink px-5 py-2.5 text-sm font-semibold text-white hover:bg-black/75"><ShoppingBag className="h-4 w-4" />{t("orderAtApple")}</a><span className="max-w-64 text-right text-xs text-black/40">{t("pickupAtStore", { store: storeQuery.data.name })}</span></>}</div></div><p className="mt-6 border-t border-black/[.07] pt-5 text-sm text-black/45">SKU {availability.product.sku} · {t("lastChecked", { time: new Date(availability.availability.last_checked_at).toLocaleString(locale === "zh" ? "zh-CN" : "en-US") })}</p></section>}
+            {availability && <section className="mt-6 rounded-[2rem] border border-black/[.07] bg-white p-7 sm:p-10"><div className="flex flex-wrap items-start justify-between gap-6"><div><p className="text-xs font-bold uppercase tracking-[.14em] text-black/35">{t("currentPickupStatus")}</p><h2 className="mt-2 text-2xl font-semibold">{localizePickupMessage(availability.availability.pickup_message, locale)}</h2></div><div className="flex flex-col items-end gap-3"><StatusBadge status={availability.availability.status} />{availability.availability.available && <><CheckoutHandoff result={availability} zip={zip} /><span className="max-w-64 text-right text-xs text-black/40">{t("pickupAtStore", { store: storeQuery.data.name })}</span></>}</div></div><p className="mt-6 border-t border-black/[.07] pt-5 text-sm text-black/45">SKU {availability.product.sku} · {t("lastChecked", { time: new Date(availability.availability.last_checked_at).toLocaleString(locale === "zh" ? "zh-CN" : "en-US") })}</p></section>}
           </>
         )}
       </main>
